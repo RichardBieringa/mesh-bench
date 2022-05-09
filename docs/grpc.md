@@ -15,5 +15,12 @@ The gRPC documentation specified the GRPC Health Checking Protocol. A recommende
 [fortio](https://gihub.com/fortio/fortio) is a load testing tool that supports the gRPC protocol. We can test the default health check protocol in the following maner.
 
 ```sh
+
 fortio load -grpc HOST:PORT
+```
+
+## Meshery
+
+```
+curl "http://localhost:9081/api/user/performance/profiles/$(uuidgen)/run?c=2&dur=s&loadGenerator=fortio&mesh=ISTIO&name=test&qps=10&t=10&url=http%3A%2F%2Flocalhost%3A8080&type=grpc" --cookie "meshery-provider=None"
 ```
