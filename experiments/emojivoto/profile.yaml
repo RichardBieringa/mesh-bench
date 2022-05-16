@@ -1,11 +1,11 @@
 test:
   smp_version: v0.0.1
-  name: Random Name
+  name: test
   labels: {}
   clients:
     - internal: false
       load_generator: fortio
-      protocol: 1
+      protocol: 4
       connections: 2
       rps: 10
       headers: {}
@@ -13,7 +13,10 @@ test:
       body: ''
       content_type: ''
       endpoint_urls:
+        - 'localhost:8080'
+        - 'http://google.com'
         - 'http://10.128.93.249:80'
   duration: '10s'
 mesh:
   type: 3
+

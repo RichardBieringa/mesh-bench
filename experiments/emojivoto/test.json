@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "url": "http://10.128.93.249:80",
+        "payload": "foo",
+        "qps": "0",
+        "c": "32",
+        "t": "30s",
+        "headers": [
+            "Foo:Bar",
+            "X-Blah: Something else"
+        ],
+        "save": "on"
+    }
+}
