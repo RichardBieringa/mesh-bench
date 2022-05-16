@@ -26,7 +26,8 @@ resource "linode_lke_cluster" "cluster" {
 }
 
 output "kubeconfig" {
-  value = linode_lke_cluster.cluster.kubeconfig
+  sensitive = true
+  value     = linode_lke_cluster.cluster.kubeconfig
 }
 
 output "api_endpoints" {
