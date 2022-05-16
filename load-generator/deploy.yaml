@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortio
+  labels:
+    app.kubernetes.io/name: fortio
+    app.kubernetes.io/version: "1.28.0"
+    app.kubernetes.io/component: load-generator
+spec:
+  selector:
+    matchLabels:
+      octopusexport: OctopusExport
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: load-generator
+        octopusexport: OctopusExport
+    spec:
+      containers:
+        - name: fortio
+          image: 'fortio/fortio:1.28.0'
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
