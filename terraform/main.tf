@@ -42,5 +42,5 @@ output "id" {
 }
 
 output "pool" {
-  value = linode_lke_cluster.foobar.pool
+  value = linode_lke_cluster.cluster.pool
 }
