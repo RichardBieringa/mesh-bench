@@ -20,7 +20,7 @@ variable "region" {
 variable "tags" {
   description = "Tags to apply to your cluster for organizational purposes. (optional)"
   type        = list(string)
-  default     = [""]
+  default     = ["service mesh", "benchmark"]
 }
 
 variable "pools" {
