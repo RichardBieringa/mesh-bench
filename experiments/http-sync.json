@@ -1,0 +1,11 @@
+
+{
+    "metadata": {
+        "url": "http://localhost:8080",
+        "qps": "100000",
+        "c": "32",
+        "t": "10s",
+        "save": "on",
+        "async": "off"
+    }
+}
