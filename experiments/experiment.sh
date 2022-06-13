@@ -31,6 +31,9 @@ TARGET_NS="benchmark"
 TARGET_SVC="target-fortio"
 TARGET_PORT="8080"
 
+# Services that fortio exposes (for load testing)
+HTTP_ECHO_PORT="8080"
+GRPC_PING_PORT="8079"
 
 # Results Directory
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
@@ -70,10 +73,10 @@ function run_http_experiment {
     NOCATCHUP=${5:-"on"}
 
     # In order to used traefik meshed services it has to use .traefik.mesh DNS
-    TARGET="http://${TARGET_SVC}.${TARGET_NS}.svc.${CLUSTER_DOMAIN}:${TARGET_PORT}"
+    TARGET="http://${TARGET_SVC}.${TARGET_NS}.svc.${CLUSTER_DOMAIN}:${HTTP_ECHO_PORT}"
     if [[ $MESH == *"traefik"* ]]
     then
-        TARGET="http://${TARGET_SVC}.${TARGET_NS}.traefik.mesh:${TARGET_PORT}"
+        TARGET="http://${TARGET_SVC}.${TARGET_NS}.traefik.mesh:${HTTP_ECHO_PORT}"
     fi
 
     # Formatting for filename/log
@@ -114,6 +117,7 @@ function run_http_experiment {
         fi
     done
 
+    printf "\n\n"
 }
 
 # Runs an HTTP experiment to test maximum throughput (max QPS)
@@ -128,7 +132,7 @@ function run_http_experiment_max_throughput {
     fi
 
     # Create output dir if not exist
-    D="${RESULTS_DIR}/set-qps"
+    D="${RESULTS_DIR}/http/max-qps"
     mkdir -p $D 
 
     run_http_experiment $D $1 "-1" "off" "off"
@@ -155,12 +159,132 @@ function run_http_experiment_set_qps {
     )
 
     # Create output dir if not exist
-    D="${RESULTS_DIR}/set-qps"
+    D="${RESULTS_DIR}/http/set-qps"
     mkdir -p $D 
 
     for q in "${lst[@]}"
     do
         run_http_experiment $D $1 $q "on" "on"
+    done
+}
+
+
+# Run an HTTP experiment 
+# arg1: Output Directory for experiment results
+# arg2: Mesh Configuration e.g. "linkerd"
+# arg3: Queries Per Second e.g. 3000 (use -1 for unlimited)
+# arg4 (optional): Uniform Distribution of requests among threads (default: on)
+# arg5 (optional): Do not try to catch up to QPS is falling behind (default: on)
+function run_grpc_experiment {
+    # Usage check
+    if [[ $# -lt 3 ]]
+    then 
+        echo "usage: run_grpc_experiment <outdir> <mesh> <qps> [uniform] [nocatchup]"
+        exit 1
+    fi
+
+    # Local experiment settings
+    D=${1:-${RESULTS_DIR}}
+    MESH=$2
+    QPS=$3
+    UNIFORM=${4:-"on"}
+    NOCATCHUP=${5:-"on"}
+
+    # In order to used traefik meshed services it has to use .traefik.mesh DNS
+    TARGET="http://${TARGET_SVC}.${TARGET_NS}.svc.${CLUSTER_DOMAIN}:${GRPC_PING_PORT}"
+    if [[ $MESH == *"traefik"* ]]
+    then
+        TARGET="http://${TARGET_SVC}.${TARGET_NS}.traefik.mesh:${GRPC_PING_PORT}"
+    fi
+
+    # Formatting for filename/log
+    fqps=$QPS
+    if [[ $QPS -lt 0 ]]
+    then
+        fqps="MAX"
+    fi
+
+    echo "grpc_experiment (x ${REPETITIONS})"
+    echo "mesh: ${MESH}"
+    echo "qps: ${fqps}"
+    echo "uniform: ${UNIFORM}"
+    echo "nocatchup: ${NOCATCHUP}"
+    echo "connections: ${CONNECTIONS}"
+    echo "duration: ${DURATION}"
+    echo "resolution: ${RESOLUTION}"
+    echo "-----------------"
+    printf "\n"
+
+    # The URL of the Fortio rest server with query parameters to control the experiment settings
+    URL="${LOAD_GEN_ENDPOINT}?url=${TARGET}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}&runner=grpc"
+    exit 0
+
+    # Run experiments and save results to output json
+    for i in $(seq ${REPETITIONS})
+    do
+        NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        FNAME="http_${MESH}_${fqps}_${i}_${NOW}.json"
+
+        echo "http_experiment #${i} @  ${NOW}"
+        RES=$(curl -s "$URL")
+
+        if [ $? -eq 0 ]; then
+            echo $RES > "${D}/${FNAME}"
+        else
+            echo "Error connecting to ${URL}"
+            exit 1
+        fi
+    done
+
+    printf "\n\n"
+}
+
+
+# Runs an GRPC experiment to test maximum throughput (max QPS)
+# Wrapper arround the run_grpc_experiment function
+# Uniform distribution and nocatchup are off to maximise throughput
+function run_grpc_experiment_max_throughput {
+    # Usage check
+    if [[ $# -lt 1 ]]
+    then 
+        echo "usage: run_grpc_experiment_max_throughput <mesh>"
+        exit 1
+    fi
+
+    # Create output dir if not exist
+    D="${RESULTS_DIR}/grpc/max-qps"
+    mkdir -p $D 
+
+    run_grpc_experiment $D $1 "-1" "off" "off"
+}
+
+# Runs several GRPC experiments using pre-determined QPS values
+# Wrapper arround the run_grpc_experiment function
+# Uses a uniform distribution of request among threads
+# And sets no catch up on to simulate constant throughput experiments
+function run_grpc_experiment_set_qps {
+    # Usage check
+    if [[ $# -lt 1 ]]
+    then 
+        echo "usage: run_grpc_experiment_set_qps <mesh>"
+        exit 1
+    fi
+
+    # List of QPS settings for the experiment
+    lst=(
+        100
+        500
+        1500
+        2500
+    )
+
+    # Create output dir if not exist
+    D="${RESULTS_DIR}/grpc/set-qps"
+    mkdir -p $D 
+
+    for q in "${lst[@]}"
+    do
+        run_grpc_experiment $D $1 $q "on" "on"
     done
 }
 
@@ -192,23 +316,32 @@ function setup {
         # Check if port forwarding process is still runningj
         if ! ps $pid > /dev/null 
         then
-            echo "Port forwarding stopped" >&2
+            echo "Port Forwarding stopped" >&2
             exit 1
         fi
 
         sleep 1
     done
     sleep 1
-    printf "Port Forwading Done! ✔️\n\n"
+    printf "Port Forwarding Done! ✔️\n\n"
 }
 
 function main {
     # Basic pre-checks and setup for experiments
     setup
 
+    # ------------------
     # Actual experiments
-    run_http_experiment_set_qps "baseline"
+    # ------------------
+
+
+    # HTTP
     # run_http_experiment_max_throughput "baseline"
+    # run_http_experiment_set_qps "baseline"
+
+    # GRPC
+    run_grpc_experiment_max_throughput "baseline"
+    # run_grpc_experiment_set_qps "baseline"
 
     exit 0
 }
