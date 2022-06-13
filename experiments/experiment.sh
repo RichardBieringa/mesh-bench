@@ -17,7 +17,7 @@ IFS=$'\n\t'
 # RESOLUTION: Resolution of the histogram lowest buckets in seconds (default 0.001 i.e 1ms), use 1/10th of your expected typical latency
 CONNECTIONS=${CONNECTIONS:-"32"}
 DURATION=${DURATION:-"5m"}
-RESOLUTION=${RESOLUTION:-"0.00001"}
+RESOLUTION=${RESOLUTION:-"0.001"}
 REPETITIONS=5
 
 
@@ -120,7 +120,7 @@ function http_load_test {
     for i in $(seq ${REPETITIONS})
     do
         NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        FNAME="http_${MESH}_${fqps}_${i}_${NOW}.json"
+        FNAME="http_${MESH}_${fqps}_${PAYLOAD_SIZE}_${i}_${NOW}.json"
 
         echo "http_experiment #${i} @  ${NOW}"
         RES=$(curl -s "$URL")
@@ -189,7 +189,7 @@ function grpc_load_test {
     for i in $(seq ${REPETITIONS})
     do
         NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        FNAME="grpc_${MESH}_${fqps}_${i}_${NOW}.json"
+        FNAME="grpc_${MESH}_${fqps}_0_${i}_${NOW}.json"
 
         echo "grpc_experiment #${i} @  ${NOW}"
         RES=$(curl -s "$URL")
