@@ -78,7 +78,7 @@ function run_http_experiment {
 
     # Formatting for filename/log
     fqps=$QPS
-    if [[ $QPS -eq -1 ]]
+    if [[ $QPS -lt 0 ]]
     then
         fqps="MAX"
     fi
@@ -160,7 +160,7 @@ function run_http_experiment_set_qps {
 
     for q in "${lst[@]}"
     do
-        run_http_experiment $D $1 "-1" "on" "on"
+        run_http_experiment $D $1 $q "on" "on"
     done
 }
 
