@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+# set -euo pipefail
 IFS=$'\n\t'
 
 # Used to perform load testing experiments on a kubernetes cluster
@@ -10,8 +10,8 @@ IFS=$'\n\t'
 # CONNECTIONS: Sets the amount of connections to use for the load testing experiment
 # DURATION: Control the duration expressed in human time format (e.g. 30s/1m/3h)
 # RESOLUTION: Resolution of the histogram lowest buckets in seconds (default 0.001 i.e 1ms), use 1/10th of your expected typical latency
-CONNECTIONS=${CONNECTIONS:-"8"}
-DURATION=${DURATION:-"1m"}
+CONNECTIONS=${CONNECTIONS:-"32"}
+DURATION=${DURATION:-"5m"}
 RESOLUTION=${RESOLUTION:-"0.00001"}
 REPETITIONS=5
 
@@ -66,10 +66,10 @@ function run_http_experiment {
     NOCATCHUP=${3:-"on"}
 
     # In order to used traefik meshed services it has to use .traefik.mesh DNS
-    URL="http://${TARGET_SVC}.${TARGET_NS}.svc.${CLUSTER_DOMAIN}:${TARGET_PORT}"
+    TARGET="http://${TARGET_SVC}.${TARGET_NS}.svc.${CLUSTER_DOMAIN}:${TARGET_PORT}"
     if [[ $MESH == *"traefik"* ]]
     then
-        URL="http://${TARGET_SVC}.${TARGET_NS}.traefik.mesh:${TARGET_PORT}"
+        TARGET="http://${TARGET_SVC}.${TARGET_NS}.traefik.mesh:${TARGET_PORT}"
     fi
 
     # Formatting for filename/log
@@ -90,15 +90,24 @@ function run_http_experiment {
     echo "-----------------"
     printf "\n"
 
+    # The URL of the Fortio rest server with query parameters to control the experiment settings
+    URL="${LOAD_GEN_ENDPOINT}?url=${TARGET}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}"
+
     # Run experiments and save results to output json
     for i in $(seq ${REPETITIONS})
     do
         NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        URL="${LOAD_GEN_ENDPOINT}?url=${URL}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}"
         FNAME="http_${MESH}_${fqps}_${i}_${NOW}.json"
 
         echo "http_experiment #${i} @  ${NOW}"
-        curl -s $URL > "${RESULTS_DIR}/http/${FNAME}"
+        RES=$(curl -s "$URL")
+
+        if [ $? -eq 0 ]; then
+            echo $RES > "${RESULTS_DIR}/http/${FNAME}"
+        else
+            echo "Error connecting to ${URL}"
+            exit 1
+        fi
     done
 
 }
@@ -131,7 +140,8 @@ function main {
     # Port forward to load generator REST API
     echo "Port Forwarding to Fortio..."
     kubectl port-forward svc/load-generator-fortio 8080:8080 &
-    printf "Port Forwading Done ✔️\n\n"
+    sleep 3
+    printf "Port Forwading Done! ✔️\n\n"
 
 
     # ------------------
