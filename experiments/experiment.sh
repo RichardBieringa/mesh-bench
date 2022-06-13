@@ -17,6 +17,8 @@ REPETITIONS=5
 
 
 # The host of the Fortio REST API which will generate the workload
+LOAD_GEN_NS="default"
+LOAD_GEN_SVC="load-generator-fortio"
 LOAD_GEN_HOST="localhost"
 LOAD_GEN_PORT="8080"
 LOAD_GEN_ENDPOINT="http://${LOAD_GEN_HOST}:${LOAD_GEN_PORT}/fortio/rest/run"
@@ -47,23 +49,25 @@ function check_installed {
 }
 
 # Run an HTTP experiment 
-# arg1: Mesh Configuration e.g. "linkerd"
-# arg2: Queries Per Second e.g. 3000 (use -1 for unlimited)
-# arg3 (optional): Uniform Distribution of requests among threads (default: on)
-# arg4 (optional): Do not try to catch up to QPS is falling behind (default: on)
+# arg1: Output Directory for experiment results
+# arg2: Mesh Configuration e.g. "linkerd"
+# arg3: Queries Per Second e.g. 3000 (use -1 for unlimited)
+# arg4 (optional): Uniform Distribution of requests among threads (default: on)
+# arg5 (optional): Do not try to catch up to QPS is falling behind (default: on)
 function run_http_experiment {
     # Usage check
-    if [[ $# -lt 2 ]]
+    if [[ $# -lt 3 ]]
     then 
-        echo "usage: run_http_experiment <mesh> <qps> [uniform] [nocatchup]"
+        echo "usage: run_http_experiment <outdir> <mesh> <qps> [uniform] [nocatchup]"
         exit 1
     fi
 
     # Local experiment settings
-    MESH=$1
-    QPS=$2
-    UNIFORM=${3:-"on"}
-    NOCATCHUP=${3:-"on"}
+    D=${1:-${RESULTS_DIR}}
+    MESH=$2
+    QPS=$3
+    UNIFORM=${4:-"on"}
+    NOCATCHUP=${5:-"on"}
 
     # In order to used traefik meshed services it has to use .traefik.mesh DNS
     TARGET="http://${TARGET_SVC}.${TARGET_NS}.svc.${CLUSTER_DOMAIN}:${TARGET_PORT}"
@@ -103,7 +107,7 @@ function run_http_experiment {
         RES=$(curl -s "$URL")
 
         if [ $? -eq 0 ]; then
-            echo $RES > "${RESULTS_DIR}/http/${FNAME}"
+            echo $RES > "${D}/${FNAME}"
         else
             echo "Error connecting to ${URL}"
             exit 1
@@ -123,42 +127,88 @@ function run_http_experiment_max_throughput {
         exit 1
     fi
 
-    run_http_experiment $1 "-1" "off" "off"
+    # Create output dir if not exist
+    D="${RESULTS_DIR}/set-qps"
+    mkdir -p $D 
+
+    run_http_experiment $D $1 "-1" "off" "off"
 }
 
-# Kill backbground jobs (port forwarding on exit)
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+# Runs several HTTP experiments using pre-determined QPS values
+# Wrapper arround the run_http_experiment function
+# Uses a uniform distribution of request among threads
+# And sets no catch up on to simulate constant throughput experiments
+function run_http_experiment_set_qps {
+    # Usage check
+    if [[ $# -lt 1 ]]
+    then 
+        echo "usage: run_http_experiment_set_qps <mesh>"
+        exit 1
+    fi
 
-function main {
-
-    # Requirements
-    echo "Checking Requirements..."
-    check_installed "curl"
-    check_installed "kubectl"
-    printf "Requirements installed! ✔️\n\n"
-
-    # Port forward to load generator REST API
-    echo "Port Forwarding to Fortio..."
-    kubectl port-forward svc/load-generator-fortio 8080:8080 &
-    sleep 3
-    printf "Port Forwading Done! ✔️\n\n"
-
-
-    # ------------------
-    # Actual experiments
-    # ------------------
+    # List of QPS settings for the experiment
     lst=(
         100
         500
         1500
         2500
     )
-    type="baseline"
+
+    # Create output dir if not exist
+    D="${RESULTS_DIR}/set-qps"
+    mkdir -p $D 
 
     for q in "${lst[@]}"
     do
-        run_http_experiment $type $q
+        run_http_experiment $D $1 "-1" "on" "on"
     done
+}
+
+# Kill backbground jobs (port forwarding on exit)
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+
+function setup {
+
+    # Check Requirements
+    echo "Checking Requirements..."
+    check_installed "curl"
+    check_installed "kubectl"
+    check_installed "grep"
+    printf "Requirements installed! ✔️\n\n"
+
+    # Port forward to load generator REST API
+    echo "Port Forwarding to Fortio..."
+
+    # Creates temporary file to store output
+    output=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXX")
+
+    # Start the port forwarding process
+    kubectl port-forward -n ${LOAD_GEN_NS} svc/${LOAD_GEN_SVC} ${LOAD_GEN_PORT}:${LOAD_GEN_PORT} &> $output &
+    pid=$!
+
+    # Wait until the port forwarding process is ready to accept connections
+    until grep -q -i "Forwarding from" $output
+    do       
+        # Check if port forwarding process is still runningj
+        if ! ps $pid > /dev/null 
+        then
+            echo "Port forwarding stopped" >&2
+            exit 1
+        fi
+
+        sleep 1
+    done
+    sleep 1
+    printf "Port Forwading Done! ✔️\n\n"
+}
+
+function main {
+    # Basic pre-checks and setup for experiments
+    setup
+
+    # Actual experiments
+    run_http_experiment_set_qps "baseline"
+    # run_http_experiment_max_throughput "baseline"
 
     exit 0
 }
