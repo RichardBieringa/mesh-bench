@@ -1,0 +1,14 @@
+$ linkerd version
+linkerd version
+Client version: stable-2.11.2
+Server version: unavailable
+
+$ cilium version
+cilium-cli: v0.11.7 compiled with go1.18.2 on linux/amd64
+cilium image (default): v1.11.5
+cilium image (stable): v1.11.6
+cilium image (running): unknown. Unable to obtain cilium version, no cilium pods found in namespace "kube-system"
+
+$ istioctl version
+no running Istio pods in "istio-system"
+1.14.1
