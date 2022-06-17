@@ -5,7 +5,9 @@ image:
   # Defaults to appVersion in Chart.yaml
   tag: ""
 
-podAnnotations: {}
+podAnnotations:
+  "linkerd.io/inject": "enabled"
+  "istio-injection": "enabled"
 
 service:
   ports:
@@ -37,7 +39,8 @@ resources: {}
   #   memory: 128Mi
 
 # Constrain pod to run on a select set of nodes
-nodeSelector: {}
+nodeSelector: 
+  # "benchmark": "true"
 
 # Tolerations are applied to pods, and allow (but do not require) the pods to schedule onto nodes with matching taints.
 tolerations: []

@@ -1,0 +1,37 @@
+apiVersion: v2
+appVersion: v1.4.5
+dependencies:
+- condition: tracing.deploy
+  name: tracing
+  repository: ""
+  version: 0.0.3
+- condition: metrics.deploy
+  name: metrics
+  repository: ""
+  version: 0.1.0
+description: Traefik Mesh - Simpler Service Mesh
+home: https://traefik.io/traefik-mesh/
+icon: https://raw.githubusercontent.com/traefik/mesh/master/docs/content/assets/img/traefik-mesh.png
+keywords:
+- traefik
+- mesh
+- smi
+maintainers:
+- email: emile@vauge.com
+  name: emilevauge
+- email: daniel.tomcej@gmail.com
+  name: dtomcej
+- email: michael@traefik.io
+  name: mmatur
+- email: manuel@traefik.io
+  name: santode
+- email: harold@traefik.io
+  name: jspdown
+- email: kevin@traefik.io
+  name: kevinpollet
+name: traefik-mesh
+sources:
+- https://github.com/traefik/mesh/
+- https://github.com/traefik/mesh-helm-chart/
+type: application
+version: 4.0.2
