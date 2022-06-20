@@ -16,8 +16,8 @@ IFS=$'\n\t'
 # DURATION: Control the duration expressed in human time format (e.g. 30s/1m/3h)
 # RESOLUTION: Resolution of the histogram lowest buckets in seconds (default 0.001 i.e 1ms), use 1/10th of your expected typical latency
 CONNECTIONS=${CONNECTIONS:-"32"}
-DURATION=${DURATION:-"5m"}
-RESOLUTION=${RESOLUTION:-"0.001"}
+DURATION=${DURATION:-"10m"}
+RESOLUTION=${RESOLUTION:-"0.0001"}
 REPETITIONS=5
 
 
@@ -98,7 +98,6 @@ function http_load_test {
     if [[ $QPS -lt 0 ]]
     then
         fqps="MAX"
-        DURATION="10m"
     fi
 
     echo "http_experiment (x ${REPETITIONS})"
@@ -355,16 +354,16 @@ function main {
     mesh="baseline"
 
     # 1: HTTP - Max Throughput
-    # run_http_experiment_max_throughput $mesh
+    run_http_experiment_max_throughput $mesh
 
     # 2: HTTP - Set QPS
-    # run_http_experiment_set_qps $mesh
+    run_http_experiment_set_qps $mesh
 
     # 3: HTTP - Payload
     run_http_experiment_payload $mesh
 
     # 4: GRPC - Max Throughput
-    # run_grpc_experiment_max_throughput $mesh
+    run_grpc_experiment_max_throughput $mesh
 
     exit 0
 }
