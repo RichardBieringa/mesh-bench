@@ -113,7 +113,7 @@ function http_load_test {
     printf "\n"
 
     # The URL of the Fortio rest server with query parameters to control the experiment settings
-    URL="${LOAD_GEN_ENDPOINT}?url=${TARGET}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}"
+    URL="${LOAD_GEN_ENDPOINT}?url=${TARGET}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}&labels=${MESH};${PAYLOAD_SIZE}"
 
     # Run experiments and save results to output json
     for i in $(seq ${REPETITIONS})
@@ -181,7 +181,7 @@ function grpc_load_test {
     printf "\n"
 
     # The URL of the Fortio rest server with query parameters to control the experiment settings
-    URL="${LOAD_GEN_ENDPOINT}?url=${TARGET}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}&runner=grpc"
+    URL="${LOAD_GEN_ENDPOINT}?url=${TARGET}&qps=${QPS}&t=${DURATION}&c=${CONNECTIONS}&uniform=${UNIFORM}&nocatchup=${NOCATCHUP}&r=${RESOLUTION}&runner=grpc&labels=${MESH};${PAYLOAD_SIZE}"
 
     # Run experiments and save results to output json
     for i in $(seq ${REPETITIONS})
