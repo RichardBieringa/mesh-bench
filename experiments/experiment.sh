@@ -18,7 +18,7 @@ IFS=$'\n\t'
 CONNECTIONS=${CONNECTIONS:-"32"}
 DURATION=${DURATION:-"15m"}
 RESOLUTION=${RESOLUTION:-"0.0001"}
-REPETITIONS=5
+REPETITIONS=1
 
 
 # The host of the Fortio REST API which will generate the workload
