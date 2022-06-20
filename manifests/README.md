@@ -5,25 +5,22 @@ Contains kubernetes manifests to install required components for service mesh be
 ## Set up namespaces
 
 ```sh
-# set-up benchmark namespaces
+# benchmark namespace with labels to enable automatic sidecar injection
 kubectl create ns benchmark
 kubectl label namespace benchmark linkerd.io/inject=enabled
 kubectl label namespace benchmark istio-injection=enabled
 
-# Add automatic sidecar injection patterns
-kubectl label namespace bench-linkerd  linkerd.io/inject=enabled
-kubectl label namespace bench-istio istio-injection=enabled
-
+# monitoring namespace for kube-prom stack
+kubectl create ns monitoring
 ```
 
 ## Installation Guide
 
 ```sh
-helm install metrics-server --namespace kube-system ./metrics-server
-helm install monitoring --create-namespace --namespace monitoring ./kube-prometheus-stack
-helm install load-generator ./fortio
+# Kube prometheus stack for monitoring/pod metrics
+helm install monitoring --namespace monitoring ./manifests/kube-prometheus-stack
 
-# Target Servers
-helm install target ./fortio --namespace benchmark
-helm -n benchmark install target ./fortio
+# Installs the load generator and load receiver
+helm install load-generator ./manifests/fortio
+helm install target --namespace benchmark ./manifests/fortio
 ``
