@@ -16,7 +16,7 @@ IFS=$'\n\t'
 # DURATION: Control the duration expressed in human time format (e.g. 30s/1m/3h)
 # RESOLUTION: Resolution of the histogram lowest buckets in seconds (default 0.001 i.e 1ms), use 1/10th of your expected typical latency
 CONNECTIONS=${CONNECTIONS:-"32"}
-DURATION=${DURATION:-"10m"}
+DURATION=${DURATION:-"15m"}
 RESOLUTION=${RESOLUTION:-"0.0001"}
 REPETITIONS=5
 
@@ -167,7 +167,6 @@ function grpc_load_test {
     if [[ $QPS -lt 0 ]]
     then
         fqps="MAX"
-        DURATION="10m"
     fi
 
     echo "grpc_experiment (x ${REPETITIONS})"
@@ -238,10 +237,10 @@ function run_http_experiment_set_qps {
 
     # List of QPS settings for the experiment
     lst=(
+        1
         100
         500
-        1500
-        2500
+        1000
     )
 
     # Create output dir if not exist
@@ -272,7 +271,7 @@ function run_http_experiment_payload {
     lst=(
         0
         1000     # 1kb
-        1000000  # 1mb
+        10000    # 10kb
     )
 
     # Create output dir if not exist
