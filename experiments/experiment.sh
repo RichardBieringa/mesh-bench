@@ -42,7 +42,7 @@ GRPC_PING_PORT="8079"
 
 # Results Directory
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
-RESULTS_DIR="$(cd .. && cd results && pwd 2> /dev/null)"
+RESULTS_DIR="$(cd ${SCRIPT_DIR} && cd .. && cd results && pwd 2> /dev/null)"
 
 
 # Check if dependencies installed
