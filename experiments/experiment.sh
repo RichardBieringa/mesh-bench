@@ -124,6 +124,7 @@ function http_load_test {
         # Run experiment
         echo "http_experiment #${i} @  ${NOW}"
         RES=$(curl -s "$URL")
+        printf "Exporting results ✔️\n"
 
         # Save and export resource metrics
         export_resource_metrics $D $MESH $QPS
@@ -196,6 +197,7 @@ function grpc_load_test {
         # Run experiment
         echo "grpc_experiment #${i} @  ${NOW}"
         RES=$(curl -s "$URL")
+        printf "Exporting results ✔️\n"
 
         # Save and export resource metrics
         export_resource_metrics $D $MESH $QPS
@@ -327,8 +329,6 @@ function export_resource_metrics {
     MESH=$2
     QPS=$3
 
-    echo "Getting resource metrics from the Prometheus..."
-
     # Start and stop unix timestamps (15 min window)
     start=$(date +%s -d "15 minutes ago")
     end=$(date +%s)
@@ -344,12 +344,11 @@ function export_resource_metrics {
     cpu_query='sum(rate(container_cpu_usage_seconds_total{container!="", namespace="benchmark", pod=~"target-fortio.*"}[2m])) by (pod, container)'
     mem_query='sum(rate(container_memory_working_set_bytes{container!="", namespace="benchmark", pod=~"target-fortio.*"}[2m])) by (pod, container)'
 
-
     promtool query range -o json --start=${start} --end=${end} ${prom_host} ${cpu_query} | jq > "${D}/cpu_${MESH}_${QPS}.json"
-    printf "CPU metrics ✔️\n\n"
+    printf "Exporting CPU metrics ✔️\n"
 
-    promtool query range -o json --start=${start} --end=${end} ${prom_host} ${mem_query} | jq > "${D}/cpu_${MESH}_${QPS}.json"
-    printf "Memory metrics ✔️\n\n"
+    promtool query range -o json --start=${start} --end=${end} ${prom_host} ${mem_query} | jq > "${D}/mem_${MESH}_${QPS}.json"
+    printf "Exporting Memory metrics ✔️\n"
 }
 
 # Kill backbground jobs (port forwarding on exit)
