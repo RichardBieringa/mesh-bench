@@ -121,8 +121,12 @@ function http_load_test {
         NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         FNAME="http_${MESH}_${fqps}_${PAYLOAD_SIZE}_${i}_${NOW}.json"
 
+        # Run experiment
         echo "http_experiment #${i} @  ${NOW}"
         RES=$(curl -s "$URL")
+
+        # Save and export resource metrics
+        export_resource_metrics $D $MESH $QPS
 
         if [ $? -eq 0 ]; then
             echo $RES > "${D}/${FNAME}"
@@ -189,8 +193,12 @@ function grpc_load_test {
         NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         FNAME="grpc_${MESH}_${fqps}_0_${i}_${NOW}.json"
 
+        # Run experiment
         echo "grpc_experiment #${i} @  ${NOW}"
         RES=$(curl -s "$URL")
+
+        # Save and export resource metrics
+        export_resource_metrics $D $MESH $QPS
 
         if [ $? -eq 0 ]; then
             echo $RES > "${D}/${FNAME}"
@@ -305,6 +313,45 @@ function run_grpc_experiment_max_throughput {
     grpc_load_test $D $1 "-1" "off" "off"
 }
 
+# Stops all current experiments
+function stop_all_experiments {
+    echo "Stopping all running experiments..."
+    curl -s "http://${LOAD_GEN_HOST}:${LOAD_GEN_PORT}/fortio/rest/stop" &>/dev/null
+    sleep 5
+}
+
+
+function export_resource_metrics {
+    # Local experiment settings
+    D=${1:-${RESULTS_DIR}}
+    MESH=$2
+    QPS=$3
+
+    echo "Getting resource metrics from the Prometheus..."
+
+    # Start and stop unix timestamps (15 min window)
+    start=$(date +%s -d "15 minutes ago")
+    end=$(date +%s)
+
+    # Interval for data points
+    step=10
+
+    # Prometheus server host
+    prom_host="http://localhost:9090"
+
+
+    # PROMQL queries
+    cpu_query='sum(rate(container_cpu_usage_seconds_total{container!="", namespace="benchmark", pod=~"target-fortio.*"}[2m])) by (pod, container)'
+    mem_query='sum(rate(container_memory_working_set_bytes{container!="", namespace="benchmark", pod=~"target-fortio.*"}[2m])) by (pod, container)'
+
+
+    promtool query range -o json --start=${start} --end=${end} ${prom_host} ${cpu_query} | jq > "${D}/cpu_${MESH}_${QPS}.json"
+    printf "CPU metrics ✔️\n\n"
+
+    promtool query range -o json --start=${start} --end=${end} ${prom_host} ${mem_query} | jq > "${D}/cpu_${MESH}_${QPS}.json"
+    printf "Memory metrics ✔️\n\n"
+}
+
 # Kill backbground jobs (port forwarding on exit)
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 
@@ -314,16 +361,42 @@ function setup {
     check_installed "curl"
     check_installed "kubectl"
     check_installed "grep"
+    check_installed "promtool"
     printf "Requirements installed! ✔️\n\n"
 
     # Port forward to load generator REST API
     echo "Port Forwarding to Fortio..."
 
     # Creates temporary file to store output
-    output=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXX")
+    output=$(mktemp "${TMPDIR:-/tmp/}$(basename $0)-fortio.XXX")
 
     # Start the port forwarding process
     kubectl port-forward -n ${LOAD_GEN_NS} svc/${LOAD_GEN_SVC} ${LOAD_GEN_PORT}:${LOAD_GEN_PORT} &> $output &
+    pid=$!
+
+    # Wait until the port forwarding process is ready to accept connections
+    until grep -q -i "Forwarding from" $output
+    do       
+        # Check if port forwarding process is still runningj
+        if ! ps $pid > /dev/null 
+        then
+            echo "Port Forwarding stopped" >&2
+            exit 1
+        fi
+
+        sleep 1
+    done
+    sleep 1
+    printf "Port Forwarding Done! ✔️\n\n"
+
+    # Port forward to load generator REST API
+    echo "Port Forwarding to Prometheus..."
+
+    # Creates temporary file to store output
+    output=$(mktemp "${TMPDIR:-/tmp/}$(basename $0)-prom.XXX")
+
+    # Start the port forwarding process
+    kubectl port-forward -n monitoring svc/prometheus-operated 9090:9090 &> $output &
     pid=$!
 
     # Wait until the port forwarding process is ready to accept connections
@@ -351,6 +424,9 @@ function main {
     # ------------------
 
     mesh="baseline"
+
+    # Ensure no other experiments are running
+    stop_all_experiments
 
     # 1: HTTP - Max Throughput
     run_http_experiment_max_throughput $mesh
