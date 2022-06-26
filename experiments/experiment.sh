@@ -424,7 +424,7 @@ function main {
     # Actual experiments
     # ------------------
 
-    mesh="linkerd"
+    mesh="istio"
 
     # Ensure no other experiments are running
     stop_all_experiments
