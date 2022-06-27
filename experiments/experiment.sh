@@ -342,13 +342,13 @@ function export_resource_metrics {
     prom_host="http://localhost:9090"
 
     # PROMQL queries
-    cpu_query='sum(rate(container_cpu_usage_seconds_total{container!="", pod=~"(target-fortio|traefik-mesh-proxy).*"}[2m])) by (pod, container)'
-    mem_query='sum(rate(container_memory_working_set_bytes{container!="", pod=~"(target-fortio|traefik-mesh-proxy).*"}[2m])) by (pod, container)'
+    cpu_query='sum(rate(container_cpu_usage_seconds_total{container!="", pod=~"(target-fortio|traefik-mesh-proxy|cilium).*"}[2m])) by (pod, container)'
+    mem_query='sum(rate(container_memory_working_set_bytes{container!="", pod=~"(target-fortio|traefik-mesh-proxy|cilium).*"}[2m])) by (pod, container)'
 
-    promtool query range -o json --start=${start} --end=${end} ${prom_host} ${cpu_query} | jq > "${D}/cpu_${MESH}_${QPS}_${NOW}.json"
+    promtool query range -o json --start=${start} --end=${end} ${prom_host} "${cpu_query}" | jq > "${D}/cpu_${MESH}_${QPS}_${NOW}.json"
     printf "Exporting CPU metrics ✔️\n"
 
-    promtool query range -o json --start=${start} --end=${end} ${prom_host} ${mem_query} | jq > "${D}/mem_${MESH}_${QPS}_${NOW}.json"
+    promtool query range -o json --start=${start} --end=${end} ${prom_host} "${mem_query}" | jq > "${D}/mem_${MESH}_${QPS}_${NOW}.json"
     printf "Exporting Memory metrics ✔️\n"
 }
 
@@ -423,7 +423,7 @@ function main {
     # Actual experiments
     # ------------------
 
-    mesh="traefik"
+mesh="cilium"
 
     # Ensure no other experiments are running
     stop_all_experiments
