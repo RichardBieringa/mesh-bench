@@ -342,8 +342,8 @@ function export_resource_metrics {
     prom_host="http://localhost:9090"
 
     # PROMQL queries
-    cpu_query='sum(rate(container_cpu_usage_seconds_total{container!="", pod=~"(target-fortio|traefik-mesh-proxy|cilium).*"}[2m])) by (pod, container)'
-    mem_query='sum(rate(container_memory_working_set_bytes{container!="", pod=~"(target-fortio|traefik-mesh-proxy|cilium).*"}[2m])) by (pod, container)'
+    cpu_query='sum(rate(container_cpu_usage_seconds_total{container!="", pod=~"(target-fortio|traefik-mesh-proxy|cilium).*"}[1m])) by (pod, container)'
+    mem_query='sum(rate(container_memory_working_set_bytes{container!="", pod=~"(target-fortio|traefik-mesh-proxy|cilium).*"}[1m])) by (pod, container)'
 
     promtool query range -o json --start=${start} --end=${end} ${prom_host} "${cpu_query}" | jq > "${D}/cpu_${MESH}_${QPS}_${NOW}.json"
     printf "Exporting CPU metrics ✔️\n"
@@ -423,7 +423,7 @@ function main {
     # Actual experiments
     # ------------------
 
-mesh="cilium"
+    mesh="baseline"
 
     # Ensure no other experiments are running
     stop_all_experiments
@@ -431,11 +431,17 @@ mesh="cilium"
     # 1: HTTP - Max Throughput
     run_http_experiment_max_throughput $mesh
 
+    sleep 60
+
     # 2: HTTP - Set QPS
     run_http_experiment_set_qps $mesh
 
+    sleep 60
+
     # 3: HTTP - Payload
     run_http_experiment_payload $mesh
+
+    sleep 60
 
     # 4: GRPC - Max Throughput
     run_grpc_experiment_max_throughput $mesh
