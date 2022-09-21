@@ -13,9 +13,10 @@ Below is an overview of the files and directories in this repository and their r
 
 
     ├── data                    # Used by the data extraction scripts in /viz
-    ├── manifests               # Contains the Kubernetes manifests
-    ├── plots                   # Contains the graphical plots of the experiment data
-    ├── results                 # Contains the experiment results
+    ├── manifests               # Contains the Kubernetes manifests required to run the benchmark
+    ├── experiments             # Prototype of Mesh Bench, and instructions on how to use it
+    ├── plots                   # Graphical plots of the experiment data
+    ├── results                 # Raw data of the experiment results
     ├── viz                     # Jupyter notebooks for data visualization and generation
     ├── LICENSE
     ├── README.md
